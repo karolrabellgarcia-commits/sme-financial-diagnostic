@@ -1,93 +1,134 @@
-"""
-app.py
-------
-Interfaz web interactiva construida con Streamlit para el SaaS
-de Diagnóstico Financiero de PYMEs. Versión corporativa sin elementos informales.
-"""
+# app.py
+import sys
+import os
+
+# Asegurar que el path incluye la raíz para importar los módulos correctamente
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 import streamlit as st
-from financial_engine import FinancialData, FinancialDiagnosticEngine
-from narrative_generator import ExecutiveTranslator
+from financial_normalization.models import BalanceSheet, IncomeStatement
+from accounting_validation.validator import AccountingValidator
+from financial_metrics.calculator import FinancialCalculator
+from audit_trail.provenance import ProvenanceTracker
+from sector_benchmarking.benchmarker import SectorBenchmarker
 
-# Configuración de la página
 st.set_page_config(
-    page_title="Diagnóstico Financiero PYME",
-    layout="wide"
+    page_title="Plataforma de Diagnóstico Financiero Empresarial",
+    page_layout="wide"
 )
 
-# Título y Encabezado
-st.title("Diagnóstico Financiero Automático para PYMEs")
+st.title("Plataforma de Inteligencia Financiera y Diagnóstico Empresarial")
 st.markdown("---")
 
-# Barra lateral (Sidebar) para entrada de datos
-st.sidebar.header("Datos de la Empresa")
-cif_input = st.sidebar.text_input("Introduce el CIF de la empresa:", value="B12345678")
+# Barra lateral para entrada de datos de la empresa y referencias sectoriales
+st.sidebar.header("1. Datos de Identificación y Sectoriales")
+cif_input = st.text_input("CIF de la Sociedad", value="B82000004")
+dso_sector = st.sidebar.number_input("DSO Mediana Sector (días)", value=60.0)
+limite_deuda_cp_sector = st.sidebar.number_input("Límite Deuda CP Sector (%)", value=40.0)
 
-st.sidebar.subheader("Configuración de Cohorte")
-dso_sector = st.sidebar.number_input("DSO Mediana Sector (Días)", value=55)
-p75_deuda_cp = st.sidebar.number_input("Límite Deuda CP Sector (%)", value=50)
-
-# Botón de ejecución
-if st.sidebar.button("Generar Diagnóstico", type="primary"):
+st.sidebar.header("2. Datos Contables Normalizados (EUR)")
+with st.sidebar.expander("Balance de Situación", expanded=True):
+    activo_no_corriente = st.number_input("Activo No Corriente", value=2300000.0)
+    existencias = st.number_input("Existencias", value=400000.0)
+    deudores_comerciales = st.number_input("Deudores Comerciales (Clientes)", value=820000.0)
+    efectivo = st.number_input("Efectivo y Equivalentes", value=180000.0)
     
-    # 1. Simulación de carga de datos contables (Mock para la Demo)
-    data = FinancialData(
-        cifra_negocios=1250000.0,
-        consumos_explotacion=820000.0,
-        gastos_personal=210000.0,
-        ebitda=115000.0,
-        gastos_financieros=12500.0,
-        resultado_neto=48000.0,
-        existencias=140000.0,
-        clientes=310000.0,
-        efectivo=25000.0,
-        patrimonio_neto=420000.0,
-        deuda_bancaria_cp=180000.0,
-        deuda_bancaria_lp=95000.0,
-        proveedores=195000.0
-    )
+    patrimonio_neto = st.number_input("Patrimonio Neto Total", value=1700000.0)
+    deudas_lp = st.number_input("Deudas Financieras Largo Plazo", value=1000000.0)
+    deudas_cp = st.number_input("Deudas Financieras Corto Plazo", value=450000.0)
+    acreedores_comerciales = st.number_input("Acreedores Comerciales (Proveedores)", value=550000.0)
 
-    # 2. Motor Determinista
-    engine = FinancialDiagnosticEngine(data=data, vat_rate=0.21)
-    ratios = engine.calculate_ratios()
-    
-    cohort_medians = {
-        "dso_dias": float(dso_sector),
-        "concentracion_deuda_cp_p75": float(p75_deuda_cp)
-    }
-    diagnosis = engine.evaluate_risk_triggers(ratios, cohort_medians)
+with st.sidebar.expander("Cuenta de Pérdidas y Ganancias", expanded=False):
+    ventas = st.number_input("Cifra Neta de Negocios (Ventas)", value=4000000.0)
+    aprovisionamientos = st.number_input("Aprovisionamientos (Valor Negativo)", value=-2200000.0)
+    gastos_personal = st.number_input("Gastos de Personal (Valor Negativo)", value=-950000.0)
+    otros_gastos = st.number_input("Otros Gastos de Explotación (Valor Negativo)", value=-300000.0)
+    amortizacion = st.number_input("Amortización de Inmovilizado (Valor Negativo)", value=-150000.0)
 
-    # 3. Vista de Métricas en Pantalla (Cuadro de Mandos)
-    st.subheader(f"Indicadores Clave de Gestión (CIF: {cif_input})")
-    
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Margen EBITDA", f"{ratios['margen_ebitda_pct']}%", delta="Normal" if ratios['margen_ebitda_pct'] > 8 else "Bajo")
-    col2.metric("Cobro a Clientes (DSO)", f"{ratios['dso_dias']} días", delta=f"{ratios['dso_dias'] - dso_sector:.1f} días vs sector", delta_color="inverse")
-    col3.metric("Pago Proveedores (DPO)", f"{ratios['dpo_dias']} días")
-    col4.metric("Deuda a CP", f"{ratios['concentracion_deuda_cp_pct']}%", delta="Riesgo CP" if ratios['concentracion_deuda_cp_pct'] > p75_deuda_cp else "Sano", delta_color="inverse")
+# Construcción de objetos del modelo normalizado
+balance = BalanceSheet(
+    inmovilizado_material=activo_no_corriente,
+    existencias=existencias,
+    deudores_comerciales=deudores_comerciales,
+    efectivo_equivalentes=efectivo,
+    capital=patrimonio_neto * 0.6,
+    reservas=patrimonio_neto * 0.4,
+    resultado_ejercicio_pn=100000.0,
+    deudas_financieras_lp=deudas_lp,
+    acreedores_comerciales=acreedores_comerciales,
+    deudas_financieras_cp=deudas_cp
+)
 
-    st.markdown("---")
+pyg = IncomeStatement(
+    importe_neto_cifra_negocios=ventas,
+    aprovisionamientos=aprovisionamientos,
+    gastos_personal=gastos_personal,
+    otros_gastos_explotacion=otros_gastos,
+    amortizacion_inmovilizado=amortizacion
+)
 
-    # 4. Bloque de Alertas y Caja Inmovilizada
-    st.subheader("Alertas de Riesgo y Financiación")
-    
-    if diagnosis["caja_atrapada_total_eur"] > 0:
-        st.error(f"Caja Inmovilizada por Desfases Contables: {diagnosis['caja_atrapada_total_eur']:,.2f} EUR")
-    else:
-        st.success("No se detectan desfases graves de caja frente a la cohorte.")
+# Validación Contable Estricta
+es_valido, descuadre, incidencias_balance = AccountingValidator.validate_balance_identity(balance)
 
-    for alert in diagnosis["alertas_activadas"]:
-        st.warning(f"[{alert['gravedad']}] {alert['titulo']}: {alert['detalle']}")
+st.subheader(f"Diagnóstico para: `{cif_input}`")
 
-    st.markdown("---")
-
-    # 5. Borrador de Informe Ejecutivo
-    st.subheader("Propuesta de Informe Ejecutivo (Generado para la Dirección)")
-    
-    translator = ExecutiveTranslator(ratios=ratios, diagnosis=diagnosis)
-    payload = translator.build_llm_user_payload()
-    
-    st.info(payload)
-
+if not es_valido:
+    st.error("ALERTA CRÍTica: El balance presentado no cuadra matemáticamente.")
+    for inc in incidencias_balance:
+        st.warning(inc)
+    st.stop()
 else:
-    st.info("Haga clic en 'Generar Diagnóstico' en el panel lateral para procesar el análisis.")
+    st.success("Validación contable superada: Ecuación fundamental de balance cuadrada correctamente.")
+
+# Cálculos Financieros Deterministas
+ebitda = FinancialCalculator.calculate_ebitda(pyg)
+margen_ebitda = FinancialCalculator.calculate_ebitda_margin(pyg)
+liquidity = FinancialCalculator.calculate_liquidity_ratios(balance)
+cycles = FinancialCalculator.calculate_operational_cycles(balance, pyg)
+
+# Métricas de Deuda
+deuda_financiera_total = balance.deudas_financieras_lp + balance.deudas_financieras_cp
+pct_deuda_cp = (balance.deudas_financieras_cp / deuda_financiera_total * 100.0) if deuda_financiera_total > 0 else 0.0
+
+# Benchmarking e Impacto Económico
+impacto_dso = SectorBenchmarker.calculate_dso_economic_impact(cycles["dso"], dso_sector, ventas)
+riesgo_deuda_cp = SectorBenchmarker.evaluate_short_term_debt_risk(pct_deuda_cp, limite_deuda_cp_sector)
+
+# Visualización en Pestañas Profesionales
+tab1, tab2, tab3 = st.tabs(["1. Diagnóstico Ejecutivo y Ratios", "2. Impacto Económico y Benchmarking", "3. Trazabilidad y Certidumbre"])
+
+with tab1:
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("Cifra de Negocios", f"{ventas:,.0f} €")
+    col2.metric("EBITDA", f"{ebitda:,.0f} €", f"{margen_ebitda:.2f}% Margen")
+    col3.metric("Fondo de Maniobra", f"{liquidity['fondo_maniobra']:,.0f} €")
+    col4.metric("Ciclo Caja (CCC)", f"{cycles['ccc']} días")
+
+    st.markdown("### Indicadores Operativos y de Liquidez")
+    col_a, col_b, col_c = st.columns(3)
+    col_a.metric("Ratio Corriente", liquidity["ratio_corriente"])
+    col_b.metric("Prueba Ácida", liquidity["prueba_acida"])
+    col_c.metric("Período Medio de Cobro (DSO)", f"{cycles['dso']} días")
+
+with tab2:
+    st.markdown("### Bloque Diferencial: Impacto Económico en Euros")
+    st.info(impacto_dso["interpretacion"])
+    
+    st.markdown("### Evaluación de Riesgo de Deuda a Corto Plazo")
+    if riesgo_deuda_cp["nivel_riesgo"] == "CRÍTICO / ALTO":
+        st.error(riesgo_deuda_cp["detalle"])
+    else:
+        st.success(riesgo_deuda_cp["detalle"])
+
+with tab3:
+    st.markdown("### Trazabilidad y Reproducibilidad del Paquete")
+    payload = {
+        "cif": cif_input,
+        "ventas": ventas,
+        "ebitda": ebitda,
+        "dso": cycles["dso"],
+        "dso_sector": dso_sector
+    }
+    repro_hash = ProvenanceTracker.generate_reproducibility_hash(payload)
+    st.text(f"Hash SHA-256 de Reproducibilidad:\n{repro_hash}")
+    st.caption("Certidumbre de cálculo: DERIVADO — ALTA (Fórmulas deterministas verificadas).")
