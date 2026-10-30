@@ -3,40 +3,36 @@ from typing import Dict, Any
 
 
 class FinancialCalculator:
-    """Motor de cálculo determinista con trazabilidad y conciliación partida por partida."""
+    """Motor matemático de alta rigurosidad con conciliación y trazabilidad."""
 
     @staticmethod
     def calculate_ebitda_reconciled(pyg: Any) -> Dict[str, Any]:
-        """Calcula el EBITDA y genera la tabla de conciliación detallada."""
         ventas = pyg.importe_neto_cifra_negocios
         aprovisionamientos = pyg.aprovisionamientos
         personal = pyg.gastos_personal
         otros_gastos = pyg.otros_gastos_explotacion
         amortizacion = pyg.amortizacion_inmovilizado
 
-        # Cálculo determinista puro
         ebitda = ventas + aprovisionamientos + personal + otros_gastos
         ebit = ebitda + amortizacion
 
-        reconciliation = {
+        return {
             "partidas": [
-                {"partida": "Importe Neto de Cifra de Negocios (Ventas)", "valor": ventas, "origen": "P&G Oficial"},
+                {"partida": "Importe Neto de Cifra de Negocios", "valor": ventas, "origen": "P&G Oficial"},
                 {"partida": "Aprovisionamientos", "valor": aprovisionamientos, "origen": "P&G Oficial"},
                 {"partida": "Gastos de Personal", "valor": personal, "origen": "P&G Oficial"},
                 {"partida": "Otros Gastos de Explotación", "valor": otros_gastos, "origen": "P&G Oficial"},
-                {"partida": "Resultado Bruto de Explotación (EBITDA)", "valor": ebitda, "origen": "Derivado (Suma algebraica)"},
+                {"partida": "EBITDA (Resultado Bruto de Explotación)", "valor": ebitda, "origen": "Derivado (Suma algebraica)"},
                 {"partida": "Amortización de Inmovilizado", "valor": amortizacion, "origen": "P&G Oficial"},
-                {"partida": "Resultado de Explotación (EBIT)", "valor": ebit, "origen": "Derivado (EBITDA + Amortización)"}
+                {"partida": "EBIT (Resultado de Explotación)", "valor": ebit, "origen": "Derivado (EBITDA + Amortización)"}
             ],
             "formula": "EBITDA = Ventas + Aprovisionamientos + Gastos de Personal + Otros Gastos de Explotación",
             "resultado": ebitda,
             "fiabilidad": "Alta (Basado en P&G contable normalizada)"
         }
-        return reconciliation
 
     @staticmethod
     def calculate_working_capital(balance: Any) -> Dict[str, Any]:
-        """Calcula el Fondo de Maniobra y detalla sus componentes."""
         ac_existencias = balance.existencias
         ac_deudores = balance.deudores_comerciales
         ac_efectivo = balance.efectivo_equivalentes
@@ -48,7 +44,7 @@ class FinancialCalculator:
 
         fondo_maniobra = activo_corriente_total - pasivo_corriente_total
 
-        detalle = {
+        return {
             "activo_corriente": {
                 "existencias": ac_existencias,
                 "deudores_comerciales": ac_deudores,
@@ -64,20 +60,15 @@ class FinancialCalculator:
             "resultado": fondo_maniobra,
             "fiabilidad": "Alta (Saldos de Balance de Situación)"
         }
-        return detalle
 
     @staticmethod
     def calculate_operational_cycles_advanced(balance_inicial: Any, balance_final: Any, ventas: float, compras: float) -> Dict[str, Any]:
-        """Calcula DSO, DPO y DIO utilizando saldos medios interanuales cuando es posible."""
-        # Deudores medios
         deudores_medios = (balance_inicial.deudores_comerciales + balance_final.deudores_comerciales) / 2.0
         dso = (deudores_medios / ventas * 365.0) if ventas > 0 else 0.0
 
-        # Proveedores medios
         proveedores_medios = (balance_inicial.acreedores_comerciales + balance_final.acreedores_comerciales) / 2.0
         dpo = (proveedores_medios / abs(compras) * 365.0) if compras != 0 else 0.0
 
-        # Existencias medias
         existencias_medias = (balance_inicial.existencias + balance_final.existencias) / 2.0
         dio = (existencias_medias / abs(compras) * 365.0) if compras != 0 else 0.0
 
@@ -100,6 +91,7 @@ class FinancialCalculator:
             },
             "ccc": {
                 "valor": round(ccc, 2),
-                "formula": "CCC = DSO + DIO - DPO"
+                "formula": "CCC = DSO + DIO - DPO",
+                "resultado": round(ccc, 2)
             }
         }
