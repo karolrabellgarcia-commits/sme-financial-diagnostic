@@ -14,7 +14,7 @@ from sector_benchmarking.benchmarker import SectorBenchmarker
 
 st.set_page_config(
     page_title="Plataforma de Diagnóstico Financiero Empresarial",
-    page_layout="wide"
+    layout="wide"
 )
 
 st.title("Plataforma de Inteligencia Financiera y Diagnóstico Empresarial")
@@ -73,7 +73,7 @@ es_valido, descuadre, incidencias_balance = AccountingValidator.validate_balance
 st.subheader(f"Diagnóstico para: `{cif_input}`")
 
 if not es_valido:
-    st.error("ALERTA CRÍTica: El balance presentado no cuadra matemáticamente.")
+    st.error("ALERTA CRÍTICA: El balance presentado no cuadra matemáticamente.")
     for inc in incidencias_balance:
         st.warning(inc)
     st.stop()
