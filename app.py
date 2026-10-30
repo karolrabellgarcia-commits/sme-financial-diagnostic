@@ -11,6 +11,10 @@ from accounting_validation.validator import AccountingValidator
 from financial_metrics.calculator import FinancialCalculator
 from audit_trail.provenance import ProvenanceTracker
 from sector_benchmarking.benchmarker import SectorBenchmarker
+from stress_testing.simulator import StressTester
+from historical_analysis.analyzer import HistoricalAnalyzer
+from anomaly_detection.detector import FinancialAnomalyDetector
+from ai_interpretation.connector import AIInterpretationConnector
 
 st.set_page_config(
     page_title="Plataforma de Diagnóstico Financiero Empresarial",
@@ -18,6 +22,7 @@ st.set_page_config(
 )
 
 st.title("Plataforma de Inteligencia Financiera y Diagnóstico Empresarial")
+st.markdown("*Estándar Metodológico: Central de Balances / Rigor Determinista*")
 st.markdown("---")
 
 # Barra lateral para entrada de datos de la empresa y referencias sectoriales
@@ -27,15 +32,16 @@ dso_sector = st.sidebar.number_input("DSO Mediana Sector (días)", value=60.0)
 limite_deuda_cp_sector = st.sidebar.number_input("Límite Deuda CP Sector (%)", value=40.0)
 
 st.sidebar.header("2. Datos Contables Normalizados (EUR)")
-with st.sidebar.expander("Balance de Situación", expanded=True):
-    activo_no_corriente = st.number_input("Activo No Corriente", value=2300000.0)
+with st.sidebar.expander("Balance de Situación (Equilibrado)", expanded=True):
+    activo_no_corriente = st.number_input("Activo No Corriente", value=2400000.0)
     existencias = st.number_input("Existencias", value=400000.0)
     deudores_comerciales = st.number_input("Deudores Comerciales (Clientes)", value=820000.0)
     efectivo = st.number_input("Efectivo y Equivalentes", value=180000.0)
     
-    patrimonio_neto = st.number_input("Patrimonio Neto Total", value=1700000.0)
+    patrimonio_neto = st.number_input("Patrimonio Neto Total", value=1600000.0)
+    resultado_pn = st.number_input("Resultado del Ejercicio (en PN)", value=100000.0)
     deudas_lp = st.number_input("Deudas Financieras Largo Plazo", value=1000000.0)
-    deudas_cp = st.number_input("Deudas Financieras Corto Plazo", value=450000.0)
+    deudas_cp = st.number_input("Deudas Financieras Corto Plazo", value=550000.0)
     acreedores_comerciales = st.number_input("Acreedores Comerciales (Proveedores)", value=550000.0)
 
 with st.sidebar.expander("Cuenta de Pérdidas y Ganancias", expanded=False):
@@ -51,9 +57,9 @@ balance = BalanceSheet(
     existencias=existencias,
     deudores_comerciales=deudores_comerciales,
     efectivo_equivalentes=efectivo,
-    capital=patrimonio_neto * 0.6,
-    reservas=patrimonio_neto * 0.4,
-    resultado_ejercicio_pn=100000.0,
+    capital=patrimonio_neto,
+    reservas=0.0,
+    resultado_ejercicio_pn=resultado_pn,
     deudas_financieras_lp=deudas_lp,
     acreedores_comerciales=acreedores_comerciales,
     deudas_financieras_cp=deudas_cp
@@ -67,20 +73,20 @@ pyg = IncomeStatement(
     amortizacion_inmovilizado=amortizacion
 )
 
-# Validación Contable Estricta
+# 1. Validación Contable Estricta
 es_valido, descuadre, incidencias_balance = AccountingValidator.validate_balance_identity(balance)
 
-st.subheader(f"Diagnóstico para: `{cif_input}`")
+st.subheader(f"Diagnóstico para la Sociedad: `{cif_input}`")
 
 if not es_valido:
-    st.error("ALERTA CRÍTICA: El balance presentado no cuadra matemáticamente.")
+    st.error(f"ALERTA CRÍTICA: El balance presentado no cuadra matemáticamente. Descuadre: {descuadre:,.2f} €")
     for inc in incidencias_balance:
         st.warning(inc)
     st.stop()
 else:
-    st.success("Validación contable superada: Ecuación fundamental de balance cuadrada correctamente.")
+    st.success("Validación contable superada: Ecuación fundamental de balance cuadrada correctamente (Activo = Patrimonio Neto + Pasivo).")
 
-# Cálculos Financieros Deterministas
+# 2. Cálculos Financieros Deterministas
 ebitda = FinancialCalculator.calculate_ebitda(pyg)
 margen_ebitda = FinancialCalculator.calculate_ebitda_margin(pyg)
 liquidity = FinancialCalculator.calculate_liquidity_ratios(balance)
@@ -90,12 +96,46 @@ cycles = FinancialCalculator.calculate_operational_cycles(balance, pyg)
 deuda_financiera_total = balance.deudas_financieras_lp + balance.deudas_financieras_cp
 pct_deuda_cp = (balance.deudas_financieras_cp / deuda_financiera_total * 100.0) if deuda_financiera_total > 0 else 0.0
 
-# Benchmarking e Impacto Económico
+# 3. Benchmarking e Impacto Económico
 impacto_dso = SectorBenchmarker.calculate_dso_economic_impact(cycles["dso"], dso_sector, ventas)
 riesgo_deuda_cp = SectorBenchmarker.evaluate_short_term_debt_risk(pct_deuda_cp, limite_deuda_cp_sector)
 
+# 4. Pruebas de Estrés
+estres_costes = StressTester.simulate_cost_increase(ventas, ebitda, aprovisionamientos, 10.0)
+
+# 5. Análisis Histórico Plurianual (Demostración serie 3 años)
+serie_historica_demo = [
+    {"ejercicio": 2021, "ventas": 3200000.0, "ebitda": 380000.0, "deuda": 1100000.0, "caja": 200000.0},
+    {"ejercicio": 2022, "ventas": 3600000.0, "ebitda": 350000.0, "deuda": 1300000.0, "caja": 160000.0},
+    {"ejercicio": 2023, "ventas": 4000000.0, "ebitda": ebitda, "deuda": deuda_financiera_total, "caja": balance.efectivo_equivalentes}
+]
+crecimiento_historico = HistoricalAnalyzer.calculate_growth_rates(serie_historica_demo)
+alertas_historicas = HistoricalAnalyzer.detect_historical_patterns(serie_historica_demo)
+
+# 6. Detección de Contradicciones y Conector IA
+contradictions = FinancialAnomalyDetector.detect_contradictions(
+    ventas_crecen=True,
+    caja_baja=(balance.efectivo_equivalentes < 200000.0),
+    ebitda_sube=(ebitda > 350000.0),
+    existencias_crecen_mas_que_ventas=False
+)
+
+ai_payload = AIInterpretationConnector.build_structured_payload(
+    cif=cif_input,
+    balance_summary={"activo_total": balance.total_activo, "patrimonio_neto": balance.total_patrimonio_neto},
+    metrics_summary={"ebitda": ebitda, "margen_ebitda": margen_ebitda, "ccc": cycles["ccc"]},
+    anomalies=contradictions
+)
+
 # Visualización en Pestañas Profesionales
-tab1, tab2, tab3 = st.tabs(["1. Diagnóstico Ejecutivo y Ratios", "2. Impacto Económico y Benchmarking", "3. Trazabilidad y Certidumbre"])
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    "1. Diagnóstico Ejecutivo", 
+    "2. Impacto Económico & Benchmarking", 
+    "3. Análisis Histórico",
+    "4. Simulador de Estrés",
+    "5. Contradicciones & IA",
+    "6. Trazabilidad & Hash"
+])
 
 with tab1:
     col1, col2, col3, col4 = st.columns(4)
@@ -121,14 +161,42 @@ with tab2:
         st.success(riesgo_deuda_cp["detalle"])
 
 with tab3:
+    st.markdown("### Análisis Plurianual y Detección de Patrones")
+    st.dataframe(crecimiento_historico, use_container_width=True)
+    
+    st.markdown("### Patrones Anómalos Detectados en la Serie Temporal")
+    for alerta in alertas_historicas:
+        if "PATRÓN ANÓMALO" in alerta:
+            st.warning(alerta)
+        else:
+            st.success(alerta)
+
+with tab4:
+    st.markdown("### Simulador de Estrés Operativo (Determinista)")
+    st.write(f"**Escenario simulado:** {estres_costes['escenario']}")
+    col_s1, col_s2, col_s3 = st.columns(3)
+    col_s1.metric("Impacto en Costes", f"{estres_costes['impacto_euros']:,.0f} €")
+    col_s2.metric("Nuevo EBITDA", f"{estres_costes['nuevo_ebitda']:,.0f} €", f"{estres_costes['diferencia_ebitda']:,.0f} €")
+    col_s3.metric("Nuevo Margen EBITDA", f"{estres_costes['nuevo_margen_ebitda']:.2f}%")
+
+with tab5:
+    st.markdown("### Detección de Contradicciones Financieras Cruzadas")
+    for cond in contradictions:
+        st.warning(cond)
+        
+    st.markdown("### Objeto Estructurado para el Motor de IA")
+    st.json(ai_payload)
+    st.caption("Nota metodológica: La IA recibe exclusivamente datos precalculados y validados; no realiza operaciones matemáticas por cuenta propia.")
+
+with tab6:
     st.markdown("### Trazabilidad y Reproducibilidad del Paquete")
-    payload = {
+    payload_hash = {
         "cif": cif_input,
         "ventas": ventas,
         "ebitda": ebitda,
         "dso": cycles["dso"],
         "dso_sector": dso_sector
     }
-    repro_hash = ProvenanceTracker.generate_reproducibility_hash(payload)
+    repro_hash = ProvenanceTracker.generate_reproducibility_hash(payload_hash)
     st.text(f"Hash SHA-256 de Reproducibilidad:\n{repro_hash}")
     st.caption("Certidumbre de cálculo: DERIVADO — ALTA (Fórmulas deterministas verificadas).")
